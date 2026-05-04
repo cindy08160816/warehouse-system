@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>供應商倉儲管理系統</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Microsoft JhengHei','Noto Sans TC',sans-serif;background:#F5F5F2;min-height:100vh;font-size:14px}
+:root{
+  --bg-primary:#ffffff;--bg-secondary:#F5F5F2;--bg-tertiary:#EEEDE8;
+  --text-primary:#1a1a18;--text-secondary:#5F5E5A;--text-tertiary:#888780;
+  --border-light:rgba(0,0,0,0.1);--border-med:rgba(0,0,0,0.18);
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-text:#0C447C;
+  --green:#3B6D11;--green-light:#EAF3DE;--green-text:#27500A;
+  --red:#A32D2D;--red-light:#FCEBEB;--red-text:#791F1F;
+  --amber:#854F0B;--amber-light:#FAEEDA;--amber-text:#633806;
+  --gray-light:#F1EFE8;--gray-text:#444441;
+  --purple-light:#EEEDFE;--purple-text:#3C3489;
+  --teal-light:#E1F5EE;--teal-text:#085041;
+  --radius:8px;--radius-lg:12px;
+}
+.app{min-height:100vh}
+.topbar{background:var(--bg-primary);border-bottom:1px solid var(--border-light);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:30px;height:30px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo svg{width:16px;height:16px;fill:white}
+.brand-name{font-size:15px;font-weight:600;color:var(--text-primary)}
+.brand-sub{font-size:11px;color:var(--text-secondary)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.op-wrap{display:flex;align-items:center;gap:6px}
+.op-wrap label{font-size:12px;color:var(--text-secondary)}
+.op-wrap input{width:90px;font-size:12px;padding:4px 8px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-secondary)}
+.role-sw{display:flex;gap:3px;background:var(--bg-secondary);border-radius:8px;padding:3px;border:1px solid var(--border-light)}
+.role-btn{padding:5px 12px;font-size:12px;border:none;background:none;color:var(--text-secondary);border-radius:6px;cursor:pointer;transition:all .15s;font-family:inherit}
+.role-btn.active{background:var(--bg-primary);color:var(--text-primary);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.layout{display:flex;min-height:calc(100vh - 52px)}
+.sidebar{width:150px;background:var(--bg-primary);border-right:1px solid var(--border-light);padding:10px 0;flex-shrink:0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+.nav-section{font-size:10px;color:var(--text-tertiary);padding:10px 14px 4px;letter-spacing:.06em;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--text-secondary);cursor:pointer;border-left:2px solid transparent;transition:all .12s;user-select:none}
+.nav-item:hover{background:var(--bg-secondary);color:var(--text-primary)}
+.nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:600;border-left-color:var(--blue)}
+.nav-item svg{width:14px;height:14px;flex-shrink:0;fill:currentColor}
+.nav-pip{background:var(--red);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:auto;min-width:17px;text-align:center}
+.main{flex:1;padding:18px;overflow-x:hidden}
+.panel{display:none}.panel.active{display:block}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat-card{background:var(--bg-secondary);border-radius:var(--radius);padding:12px 14px}
+.stat-label{font-size:11px;color:var(--text-secondary);margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:700;color:var(--text-primary)}
+.sv-blue{color:var(--blue)}.sv-green{color:var(--green)}.sv-red{color:var(--red)}.sv-amber{color:var(--amber)}
+
+/* Cards */
+.card{background:var(--bg-primary);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:12px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+
+/* Alert Banner */
+.alert-banner{background:var(--red-light);border:1px solid #F09595;border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:14px;display:none}
+.alert-banner.show{display:block}
+.alert-banner-title{font-size:13px;font-weight:600;color:var(--red-text);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.alert-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--red-text)}
+
+/* Tables */
+table{width:100%;font-size:12px;border-collapse:collapse;table-layout:fixed}
+th{text-align:left;padding:8px 10px;color:var(--text-secondary);font-weight:600;font-size:11px;border-bottom:1px solid var(--border-light);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--border-light);color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg-secondary)}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-ok{background:var(--green-light);color:var(--green-text)}
+.b-warn{background:var(--amber-light);color:var(--amber-text)}
+.b-err{background:var(--red-light);color:var(--red-text)}
+.b-info{background:var(--blue-light);color:var(--blue-text)}
+.b-purple{background:var(--purple-light);color:var(--purple-text)}
+.b-teal{background:var(--teal-light);color:var(--teal-text)}
+.b-gray{background:var(--gray-light);color:var(--gray-text)}
+
+/* Forms */
+.form-area{background:var(--bg-secondary);border-radius:var(--radius);padding:14px;margin-bottom:12px;border:1px solid var(--border-light)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-3{grid-template-columns:1fr 1fr 1fr}
+.form-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;color:var(--text-secondary);font-weight:600}
+input,select,textarea{width:100%;font-size:13px;padding:7px 10px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg-primary);color:var(--text-primary);font-family:inherit;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,0.1)}
+textarea{height:70px;resize:vertical}
+.btn{padding:8px 16px;font-size:12px;border-radius:var(--radius);cursor:pointer;font-family:inherit;transition:all .15s;font-weight:600;white-space:nowrap}
+.btn-primary{background:var(--blue);color:white;border:none}.btn-primary:hover{background:var(--blue-text)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-outline{background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-med)}.btn-outline:hover{background:var(--bg-secondary)}
+.btn-row{display:flex;gap:8px;margin-top:10px}
+
+/* Tabs */
+.tab-row{display:flex;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.tab{padding:8px 16px;font-size:12px;border:none;background:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;font-weight:600;transition:all .15s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* Warehouse / Channel cards */
+.wh-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.wh-card{background:var(--bg-primary);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:12px;cursor:pointer;transition:all .15s}
+.wh-card:hover{border-color:var(--blue);box-shadow:0 2px 8px rgba(24,95,165,0.1)}
+.wh-card.selected{border:2px solid var(--blue);background:var(--blue-light)}
+.wh-card.main-wh{border-left:3px solid var(--blue)}
+.ch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.ch-card{background:var(--bg-primary);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:12px;cursor:pointer;transition:all .15s}
+.ch-card:hover{border-color:var(--blue)}
+.ch-card.selected{border:2px solid var(--blue);background:var(--blue-light)}
+
+/* Check sheet */
+.check-header{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.5fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-secondary);font-weight:600}
+.check-row-item{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.5fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light)}
+.check-row-item:last-child{border-bottom:none}
+.check-input{width:80px;font-size:13px;padding:4px 8px;text-align:right}
+.diff-pos{color:var(--green);font-weight:700}
+.diff-neg{color:var(--red);font-weight:700}
+.diff-zero{color:var(--text-secondary)}
+
+/* Progress */
+.progress-bar{background:var(--bg-secondary);border-radius:4px;height:4px;margin:8px 0}
+.progress-fill{background:#639922;height:4px;border-radius:4px;transition:width .3s}
+
+/* Step rows */
+.step-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-light)}
+.step-row:last-child{border-bottom:none}
+.step-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border-med);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s}
+.step-check.done{background:var(--green-light);border-color:var(--green)}
+.step-label{font-size:12px;flex:1;line-height:1.5}
+.step-label.done{color:var(--text-secondary);text-decoration:line-through}
+.step-who{font-size:10px;color:var(--text-tertiary);white-space:nowrap}
+
+/* Log */
+.log-item{padding:7px 0;border-bottom:1px solid var(--border-light);display:flex;gap:10px}
+.log-item:last-child{border-bottom:none}
+.log-dot{width:7px;height:7px;border-radius:50%;background:#85B7EB;margin-top:5px;flex-shrink:0}
+
+/* Upload */
+.upload-zone{border:2px dashed var(--border-med);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all .15s}
+.upload-zone:hover{background:var(--bg-secondary);border-color:var(--blue)}
+
+/* Toast */
+.toast{background:#0F6E56;color:white;padding:10px 18px;border-radius:var(--radius);font-size:13px;position:fixed;bottom:24px;right:24px;z-index:9999;opacity:0;pointer-events:none;transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:24px;color:var(--text-secondary);font-size:12px}
+
+/* Responsive */
+@media(max-width:768px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .form-3,.form-4{grid-template-columns:1fr 1fr}
+  .wh-grid,.ch-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{width:44px}.nav-item span{display:none}.nav-section{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="topbar">
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M20 7L12 3L4 7v10l8 4 8-4V7zM12 5.5L18 8.5 12 11.5 6 8.5 12 5.5zm-7 4.5l6 3v6l-6-3V10zm8 9v-6l6-3v6l-6 3z"/></svg></div>
+    <div><div class="brand-name">供應商倉儲管理系統</div><div class="brand-sub">Warehouse Management System</div></div>
+  </div>
+  <div class="topbar-right">
+    <div class="op-wrap"><label>操作人：</label><input id="op-name" value="王小明"></div>
+    <div class="role-sw">
+      <button class="role-btn active" onclick="setRole('boss',this)">老闆</button>
+      <button class="role-btn" onclick="setRole('mgr',this)">主管</button>
+      <button class="role-btn" onclick="setRole('staff',this)">人員</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<div class="sidebar">
+  <div class="nav-section">主要</div>
+  <div class="nav-item active" onclick="showPanel('dashboard',this)"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg><span>總覽</span></div>
+  <div class="nav-item" onclick="showPanel('alerts',this)"><svg viewBox="0 0 16 16"><path d="M8 1l7 13H1L8 1zm0 4v4m0 2v1" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg><span>庫存警示</span><span class="nav-pip" id="alert-pip" style="display:none">0</span></div>
+  <div class="nav-item" onclick="showPanel('stockcheck',this)"><svg viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h8v2H2z"/><polyline points="11,11 13,13 15,10" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>每日盤點</span></div>
+  <div class="nav-item" onclick="showPanel('warehouses',this)"><svg viewBox="0 0 16 16"><path d="M1 6l7-4 7 4v8H1V6zm3 2v5h2v-5H4zm3 0v5h2v-5H7zm3 0v5h2v-5h-2z"/></svg><span>倉庫管理</span></div>
+  <div class="nav-item" onclick="showPanel('inventory',this)"><svg viewBox="0 0 16 16"><path d="M2 3h12v2H2zm1 3h10v8H3zm2 2v4h2V8zm4 0v4h2V8z"/></svg><span>商品庫存</span></div>
+  <div class="nav-item" onclick="showPanel('transfer',this)"><svg viewBox="0 0 16 16"><path d="M3 8h10M9 5l4 3-4 3M7 5L3 8l4 3" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>倉庫調貨</span></div>
+  <div class="nav-item" onclick="showPanel('channels',this)"><svg viewBox="0 0 16 16"><circle cx="3" cy="8" r="2"/><circle cx="13" cy="4" r="2"/><circle cx="13" cy="12" r="2"/><line x1="5" y1="7.5" x2="11" y2="4.5" stroke="currentColor" stroke-width="1"/><line x1="5" y1="8.5" x2="11" y2="11.5" stroke="currentColor" stroke-width="1"/></svg><span>通路出貨</span></div>
+  <div class="nav-section">財務</div>
+  <div class="nav-item" onclick="showPanel('payment',this)"><svg viewBox="0 0 16 16"><rect x="1" y="3" width="14" height="10" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6" stroke="white" stroke-width="1.5"/><rect x="3" y="9" width="3" height="1.5" rx=".5" fill="white"/></svg><span>收款管理</span></div>
+  <div class="nav-item" onclick="showPanel('charity',this)"><svg viewBox="0 0 16 16"><path d="M8 2C5.8 2 4 3.8 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.2-1.8-4-4-4zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg><span>公益合作</span></div>
+  <div class="nav-section">系統</div>
+  <div class="nav-item" id="nav-log" onclick="showPanel('log',this)"><svg viewBox="0 0 16 16"><path d="M2 2h12v12H2zm2 3h8v1H4zm0 3h8v1H4zm0 3h5v1H4z"/></svg><span>操作日誌</span></div>
+</div>
+
+<div class="main">
+
+<!-- 總覽 -->
+<div class="panel active" id="panel-dashboard">
+  <div id="dash-alert-banner" class="alert-banner">
+    <div class="alert-banner-title">⚠ 庫存不足警示</div>
+    <div id="dash-alert-items"></div>
+  </div>
+  <div class="stats-row" id="dash-stats"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div class="card"><div class="card-header"><div class="card-title">各倉庫概況</div></div><div id="dash-wh-list"></div></div>
+    <div class="card"><div class="card-header"><div class="card-title">最近操作</div></div><div id="dash-log"></div></div>
+  </div>
+  <div class="card" id="dash-ar-card">
+    <div class="card-header"><div class="card-title">待收款彙整</div></div>
+    <table><thead><tr><th style="width:30%">通路商</th><th style="width:23%">訂單總額</th><th style="width:23%">已收</th><th style="width:24%">未收</th></tr></thead><tbody id="dash-ar"></tbody></table>
+  </div>
+</div>
+
+<!-- 庫存警示 -->
+<div class="panel" id="panel-alerts">
+  <div class="card">
+    <div class="card-header"><div class="card-title">庫存不足商品</div><button class="btn btn-outline btn-sm" onclick="showPanel('inventory')">前往設定安全下限</button></div>
+    <div id="alerts-content"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">完整警示狀況</div></div>
+    <table><thead><tr><th style="width:18%">商品</th><th style="width:10%">下限</th><th style="width:50%">各倉庫庫存</th><th style="width:10%">總庫存</th><th style="width:12%">狀態</th></tr></thead><tbody id="alerts-table"></tbody></table>
+  </div>
+</div>
+
+<!-- 每日盤點 -->
+<div class="panel" id="panel-stockcheck">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">每日盤點 <span id="check-date-label" style="font-size:12px;color:var(--text-secondary);font-weight:400"></span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="check-wh" onchange="renderCheckSheet()" style="width:auto;font-size:12px"></select>
+        <button class="btn btn-primary btn-sm" onclick="submitCheck()">提交今日盤點</button>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">填入今日實際盤點數量，有差異的商品庫存將自動更新。</p>
+    <div class="check-header"><div>商品名稱</div><div>帳面數量</div><div>實際盤點</div><div>差異</div><div>單位</div><div>狀態</div></div>
+    <div id="check-sheet"></div>
+    <div style="margin-top:12px"><div class="fg"><label>盤點備註</label><input id="check-note" placeholder="整體說明或異常描述..."></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">盤點歷史</div>
+      <select id="history-wh" onchange="renderCheckHistory()" style="width:auto;font-size:12px"></select>
+    </div>
+    <table><thead><tr><th style="width:12%">日期</th><th style="width:14%">倉庫</th><th style="width:14%">盤點人</th><th style="width:34%">異常商品</th><th style="width:10%">狀態</th><th style="width:16%">備註</th></tr></thead><tbody id="check-history-table"></tbody></table>
+  </div>
+</div>
+
+<!-- 倉庫管理 -->
+<div class="panel" id="panel-warehouses">
+  <div class="card">
+    <div class="card-header"><div class="card-title">倉庫列表</div><button class="btn btn-primary btn-sm" onclick="toggleForm('wh-form')">+ 新增倉庫</button></div>
+    <div id="wh-form" class="form-area" style="display:none">
+      <div class="form-row form-3">
+        <div class="fg"><label>倉庫名稱</label><input id="wh-name" placeholder="公司倉庫 A"></div>
+        <div class="fg"><label>地址 / 說明</label><input id="wh-addr" placeholder="台中市西屯區..."></div>
+        <div class="fg"><label>類型</label><select id="wh-type"><option value="main">公司倉庫</option><option value="other">外部倉庫</option></select></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addWarehouse()">儲存</button><button class="btn btn-outline btn-sm" onclick="toggleForm('wh-form')">取消</button></div>
+    </div>
+    <div class="wh-grid" id="wh-grid"></div>
+  </div>
+  <div class="card" id="wh-detail" style="display:none">
+    <div class="card-header">
+      <div class="card-title" id="wh-detail-title">倉庫庫存明細</div>
+      <button class="btn btn-primary btn-sm" onclick="toggleForm('wh-stock-form')">+ 入庫 / 調整</button>
+    </div>
+    <div id="wh-stock-form" class="form-area" style="display:none">
+      <div class="form-row form-4">
+        <div class="fg"><label>商品</label><select id="ws-product"></select></div>
+        <div class="fg"><label>數量</label><input id="ws-qty" type="number" placeholder="0"></div>
+        <div class="fg"><label>類型</label><select id="ws-optype"><option value="in">入庫（增加）</option><option value="adjust">盤點調整（設為）</option></select></div>
+        <div class="fg"><label>備註</label><input id="ws-note" placeholder="說明..."></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addWarehouseStock()">確認</button><button class="btn btn-outline btn-sm" onclick="toggleForm('wh-stock-form')">取消</button></div>
+    </div>
+    <table><thead><tr><th style="width:22%">商品</th><th style="width:12%">庫存</th><th style="width:8%">單位</th><th style="width:12%">安全下限</th><th style="width:16%">狀態</th><th style="width:16%">最後更新</th><th style="width:14%">操作人</th></tr></thead><tbody id="wh-detail-table"></tbody></table>
+  </div>
+</div>
+
+<!-- 商品庫存 -->
+<div class="panel" id="panel-inventory">
+  <div class="card">
+    <div class="card-header"><div class="card-title">商品庫存（跨倉彙總）</div><button class="btn btn-primary btn-sm" onclick="toggleForm('inv-form')">+ 新增商品</button></div>
+    <div id="inv-form" class="form-area" style="display:none">
+      <div class="form-row form-4">
+        <div class="fg"><label>商品名稱</label><input id="p-name" placeholder="禮品組 A"></div>
+        <div class="fg"><label>商品編號</label><input id="p-code" placeholder="G-001"></div>
+        <div class="fg"><label>單位</label><select id="p-unit"><option>個</option><option>箱</option><option>包</option><option>件</option><option>公斤</option><option>公升</option></select></div>
+        <div class="fg"><label>類別</label><select id="p-cat"><option>一般商品</option><option>禮品</option><option>公益商品</option><option>包材</option><option>原料</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>安全庫存下限（總量，低於此數觸發警示）</label><input id="p-min" type="number" placeholder="0"></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addProduct()">儲存</button><button class="btn btn-outline btn-sm" onclick="toggleForm('inv-form')">取消</button></div>
+    </div>
+    <table><thead><tr><th style="width:10%">編號</th><th style="width:17%">名稱</th><th style="width:9%">類別</th><th style="width:8%">下限</th><th style="width:10%">總庫存</th><th style="width:32%">各倉庫分佈</th><th style="width:14%">狀態</th></tr></thead><tbody id="inv-table"></tbody></table>
+  </div>
+</div>
+
+<!-- 倉庫調貨 -->
+<div class="panel" id="panel-transfer">
+  <div class="card">
+    <div class="card-header"><div class="card-title">新增調貨單</div></div>
+    <div class="form-row form-4">
+      <div class="fg"><label>商品</label><select id="tf-product"></select></div>
+      <div class="fg"><label>從倉庫</label><select id="tf-from"></select></div>
+      <div class="fg"><label>調至倉庫</label><select id="tf-to"></select></div>
+      <div class="fg"><label>數量</label><input id="tf-qty" type="number" placeholder="0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>調貨說明</label><input id="tf-note" placeholder="補貨原因..."></div>
+    <button class="btn btn-primary btn-sm" onclick="addTransfer()">確認調貨</button>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">調貨記錄</div></div>
+    <table><thead><tr><th style="width:16%">商品</th><th style="width:16%">從</th><th style="width:16%">至</th><th style="width:10%">數量</th><th style="width:18%">說明</th><th style="width:12%">操作人</th><th style="width:12%">日期</th></tr></thead><tbody id="tf-table"></tbody></table>
+  </div>
+</div>
+
+<!-- 通路出貨 -->
+<div class="panel" id="panel-channels">
+  <div class="card">
+    <div class="card-header"><div class="card-title">通路商</div><button class="btn btn-primary btn-sm" onclick="toggleForm('ch-form')">+ 新增通路</button></div>
+    <div id="ch-form" class="form-area" style="display:none">
+      <div class="form-row form-3">
+        <div class="fg"><label>通路名稱</label><input id="ch-name" placeholder="全聯"></div>
+        <div class="fg"><label>聯絡人</label><input id="ch-contact" placeholder="王經理"></div>
+        <div class="fg"><label>扣庫方式</label><select id="ch-deduct"><option value="ship">出貨即扣</option><option value="report">回報後扣</option></select></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addChannel()">儲存</button><button class="btn btn-outline btn-sm" onclick="toggleForm('ch-form')">取消</button></div>
+    </div>
+    <div class="ch-grid" id="ch-grid"></div>
+  </div>
+  <div class="card" id="ch-detail" style="display:none">
+    <div class="card-header"><div class="card-title" id="ch-detail-title">出貨明細</div><button class="btn btn-primary btn-sm" onclick="toggleForm('ship-form')">+ 出貨登記</button></div>
+    <div id="ship-form" class="form-area" style="display:none">
+      <div class="form-row form-4">
+        <div class="fg"><label>商品</label><select id="ship-product"></select></div>
+        <div class="fg"><label>出貨倉庫</label><select id="ship-warehouse"></select></div>
+        <div class="fg"><label>數量</label><input id="ship-qty" type="number" placeholder="0"></div>
+        <div class="fg"><label>出貨方式</label><select id="ship-mode"><option value="once">整批</option><option value="batch">分批</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>備註</label><input id="ship-note" placeholder="訂單號..."></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addShipment()">確認出貨</button><button class="btn btn-outline btn-sm" onclick="toggleForm('ship-form')">取消</button></div>
+    </div>
+    <table><thead><tr><th style="width:14%">商品</th><th style="width:13%">出貨倉庫</th><th style="width:9%">出貨量</th><th style="width:11%">已銷售</th><th style="width:8%">剩餘</th><th style="width:9%">方式</th><th style="width:16%">操作人/日期</th><th style="width:20%">備註</th></tr></thead><tbody id="ch-inv-table"></tbody></table>
+  </div>
+</div>
+
+<!-- 收款管理 -->
+<div class="panel" id="panel-payment">
+  <div class="tab-row">
+    <button class="tab active" onclick="switchPayTab('orders',this)">訂單追蹤</button>
+    <button class="tab" onclick="switchPayTab('receipts',this)">收款記錄</button>
+  </div>
+  <div id="pay-orders">
+    <div class="card">
+      <div class="card-header"><div class="card-title">新增訂單</div></div>
+      <div class="form-row form-4">
+        <div class="fg"><label>通路商</label><select id="ord-ch"></select></div>
+        <div class="fg"><label>訂單金額</label><input id="ord-amt" type="number" placeholder="0"></div>
+        <div class="fg"><label>付款方式</label><select id="ord-type"><option value="full">一次付清</option><option value="split">分期付款</option><option value="defer">先貨後款</option></select></div>
+        <div class="fg"><label>備註</label><input id="ord-note" placeholder="說明..."></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addOrder()">建立訂單</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">訂單列表</div></div>
+      <table><thead><tr><th style="width:14%">通路</th><th style="width:12%">總額</th><th style="width:12%">已收</th><th style="width:12%">未收</th><th style="width:11%">方式</th><th style="width:11%">狀態</th><th style="width:18%">建立人/時間</th><th style="width:10%">操作</th></tr></thead><tbody id="ord-table"></tbody></table>
+    </div>
+  </div>
+  <div id="pay-receipts" style="display:none">
+    <div class="card">
+      <div class="card-header"><div class="card-title">登記收款</div></div>
+      <div class="form-row">
+        <div class="fg"><label>選擇訂單</label><select id="rcpt-ord"></select></div>
+        <div class="fg"><label>收款金額</label><input id="rcpt-amt" type="number" placeholder="0"></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>收款說明</label><input id="rcpt-note" placeholder="現金 / 匯款..."></div>
+      <div class="fg" style="margin-bottom:10px">
+        <label>上傳收據照片</label>
+        <div class="upload-zone" onclick="document.getElementById('rcpt-file').click()">
+          <input type="file" id="rcpt-file" accept="image/*" multiple onchange="handleUpload(event)" style="display:none">
+          <p style="font-size:12px;color:var(--text-secondary)">點擊上傳收據照片（可多張）</p>
+          <div id="rcpt-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:center"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addReceipt()">確認收款</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">收款記錄</div></div>
+      <table><thead><tr><th style="width:18%">通路</th><th style="width:13%">金額</th><th style="width:22%">說明</th><th style="width:10%">收據</th><th style="width:20%">操作人/時間</th></tr></thead><tbody id="rcpt-table"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- 公益合作 -->
+<div class="panel" id="panel-charity">
+  <div class="card">
+    <div class="card-header"><div class="card-title">公益合作案件</div><button class="btn btn-primary btn-sm" onclick="toggleForm('ci-form')">+ 新增案件</button></div>
+    <div id="ci-form" class="form-area" style="display:none">
+      <div class="form-row form-3">
+        <div class="fg"><label>公益團體名稱</label><input id="ci-org" placeholder="育幼院"></div>
+        <div class="fg"><label>案件類型</label><select id="ci-type"><option value="receipt">團體提供收據出貨</option><option value="donation">捐款流程（經同濟會）</option></select></div>
+        <div class="fg"><label>出貨倉庫</label><select id="ci-warehouse"></select></div>
+      </div>
+      <div class="form-row form-3">
+        <div class="fg"><label>商品</label><select id="ci-product"></select></div>
+        <div class="fg"><label>數量</label><input id="ci-qty" type="number" placeholder="0"></div>
+        <div class="fg"><label>出貨方式</label><select id="ci-ship"><option value="once">整批給慢慢扣</option><option value="batch">分批寄送</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>備註</label><textarea id="ci-note" placeholder="案件說明..."></textarea></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="addCharityCase()">建立案件</button><button class="btn btn-outline btn-sm" onclick="toggleForm('ci-form')">取消</button></div>
+    </div>
+    <div id="ci-list"></div>
+  </div>
+</div>
+
+<!-- 操作日誌 -->
+<div class="panel" id="panel-log">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">完整操作日誌</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="log-search" placeholder="搜尋操作人..." style="width:130px" oninput="renderLog()">
+        <button class="btn btn-outline btn-sm" onclick="exportLog()">匯出 CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="exportAllData()">備份資料</button>
+      </div>
+    </div>
+    <table><thead><tr><th style="width:15%">時間</th><th style="width:12%">操作人</th><th style="width:10%">角色</th><th style="width:18%">動作</th><th style="width:45%">詳情</th></tr></thead><tbody id="log-table"></tbody></table>
+  </div>
+</div>
+
+</div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+let currentRole='boss',selectedWh=null,selectedCh=null,uploadedFiles=[],checkInputs={};
+let D={warehouses:[],products:[],warehouseStock:[],transfers:[],channels:[],shipments:[],orders:[],receipts:[],charityCases:[],stockChecks:[],logs:[]};
+
+function load(){try{const s=localStorage.getItem('wms_v4');if(s)D=JSON.parse(s)}catch(e){}}
+function save(){try{localStorage.setItem('wms_v4',JSON.stringify(D))}catch(e){}}
+function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=msg;t.style.background=ok?'#0F6E56':'#A32D2D';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
+function op(){return document.getElementById('op-name').value.trim()||'未知'}
+function roleLabel(){return{boss:'老闆',mgr:'主管',staff:'人員'}[currentRole]}
+function fmtDate(iso){if(!iso)return'—';const d=new Date(iso);return d.toLocaleDateString('zh-TW')+' '+d.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}
+function fmtShort(iso){if(!iso)return'—';return new Date(iso).toLocaleDateString('zh-TW')}
+function today(){return new Date().toLocaleDateString('zh-TW')}
+function addLog(action,detail){D.logs.unshift({id:Date.now(),ts:new Date().toISOString(),operator:op(),role:roleLabel(),action,detail});if(D.logs.length>800)D.logs=D.logs.slice(0,800)}
+
+function getWhStock(wId,pId){const s=D.warehouseStock.find(s=>s.whId===wId&&s.productId===pId);return s?s.qty:0}
+function setWhStock(wId,pId,delta,abs=false){
+  let s=D.warehouseStock.find(s=>s.whId===wId&&s.productId===pId);
+  if(!s){s={whId:wId,productId:pId,qty:0,updatedAt:'',updatedBy:''};D.warehouseStock.push(s)}
+  s.qty=abs?Math.max(0,delta):Math.max(0,s.qty+delta);
+  s.updatedAt=new Date().toISOString();s.updatedBy=op();
+}
+function totalStock(pId){return D.warehouses.reduce((a,w)=>a+getWhStock(w.id,pId),0)}
+function getLow(){return D.products.filter(p=>p.min>0&&totalStock(p.id)<p.min)}
+
+function updateAlertBadge(){
+  const low=getLow();
+  const pip=document.getElementById('alert-pip');
+  pip.style.display=low.length?'inline':'none';
+  if(low.length)pip.textContent=low.length;
+  const banner=document.getElementById('dash-alert-banner');
+  const items=document.getElementById('dash-alert-items');
+  if(low.length){
+    banner.classList.add('show');
+    items.innerHTML=low.map(p=>{
+      const dist=D.warehouses.map(w=>{const q=getWhStock(w.id,p.id);return q>0?`<span class="badge b-err" style="margin-left:4px">${w.name}:${q}</span>`:''}).filter(Boolean).join('');
+      return `<div class="alert-row">⚑ <strong>${p.name}</strong> 總量 ${totalStock(p.id)} / 下限 ${p.min}${dist}</div>`;
+    }).join('');
+  }else banner.classList.remove('show');
+}
+
+function setRole(role,btn){
+  currentRole=role;
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('nav-log').style.display=role==='boss'?'flex':'none';
+  renderDashboard();
+}
+
+function toggleForm(id){const f=document.getElementById(id);f.style.display=f.style.display==='none'?'block':'none'}
+
+function showPanel(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(el)el.classList.add('active');
+  else document.querySelectorAll('.nav-item').forEach(n=>{if((n.getAttribute('onclick')||'').includes("'"+name+"'"))n.classList.add('active')});
+  ({dashboard:renderDashboard,alerts:renderAlerts,stockcheck:initStockCheck,warehouses:()=>{renderWarehouseGrid();populateForms()},inventory:renderInventory,transfer:()=>{renderTransferTable();populateForms()},channels:()=>{renderChannels();populateForms()},payment:()=>{populateForms();renderOrders();renderReceipts()},charity:()=>{renderCharity();populateForms()},log:renderLog})[name]?.();
+}
+
+function initStockCheck(){
+  document.getElementById('check-date-label').textContent='（'+today()+'）';
+  const opts=D.warehouses.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('check-wh').innerHTML=opts||'<option>尚無倉庫</option>';
+  document.getElementById('history-wh').innerHTML=opts||'<option>尚無倉庫</option>';
+  renderCheckSheet();renderCheckHistory();
+}
+
+function renderCheckSheet(){
+  const whId=parseInt(document.getElementById('check-wh').value);
+  checkInputs={};
+  const el=document.getElementById('check-sheet');
+  if(!D.products.length){el.innerHTML='<div class="empty">尚無商品，請先至「商品庫存」新增</div>';return}
+  el.innerHTML=D.products.map(p=>{
+    const sys=getWhStock(whId,p.id);
+    return `<div class="check-row-item">
+      <div><strong style="font-size:13px">${p.name}</strong> <span style="font-size:11px;color:var(--text-tertiary)">${p.code||''}</span></div>
+      <div style="color:var(--text-secondary)">${sys}</div>
+      <div><input class="check-input" type="number" id="ci-${p.id}" placeholder="${sys}" min="0" oninput="updateDiff(${p.id},${sys})"></div>
+      <div id="cdiff-${p.id}" class="diff-zero">—</div>
+      <div>${p.unit}</div>
+      <div id="cst-${p.id}"><span class="badge b-gray">未填</span></div>
+    </div>`;
+  }).join('');
+}
+
+function updateDiff(pId,sys){
+  const val=document.getElementById('ci-'+pId).value;
+  const diffEl=document.getElementById('cdiff-'+pId);
+  const stEl=document.getElementById('cst-'+pId);
+  if(val===''){diffEl.textContent='—';diffEl.className='diff-zero';stEl.innerHTML='<span class="badge b-gray">未填</span>';delete checkInputs[pId];return}
+  const actual=parseInt(val),diff=actual-sys;
+  checkInputs[pId]={actual,sys,diff};
+  if(diff>0){diffEl.textContent='+'+diff;diffEl.className='diff-pos';stEl.innerHTML='<span class="badge b-warn">多出</span>'}
+  else if(diff<0){diffEl.textContent=String(diff);diffEl.className='diff-neg';stEl.innerHTML='<span class="badge b-err">短少</span>'}
+  else{diffEl.textContent='0';diffEl.className='diff-zero';stEl.innerHTML='<span class="badge b-ok">相符</span>'}
+}
+
+function submitCheck(){
+  const whId=parseInt(document.getElementById('check-wh').value);
+  const wh=D.warehouses.find(w=>w.id===whId);
+  if(!wh){toast('請選擇倉庫',false);return}
+  const keys=Object.keys(checkInputs);
+  if(!keys.length){toast('請至少填入一項數量',false);return}
+  const items=keys.map(id=>{
+    const p=D.products.find(p=>p.id===parseInt(id));
+    const {actual,sys,diff}=checkInputs[id];
+    if(diff!==0)setWhStock(whId,parseInt(id),actual,true);
+    return{productId:parseInt(id),productName:p?p.name:'',sys,actual,diff};
+  });
+  const hasDiff=items.some(i=>i.diff!==0);
+  D.stockChecks.unshift({id:Date.now(),whId,whName:wh.name,date:today(),operator:op(),items,note:document.getElementById('check-note').value.trim(),hasDiff,createdAt:new Date().toISOString()});
+  addLog('每日盤點',`[${wh.name}] ${items.length}項・${hasDiff?items.filter(i=>i.diff!==0).length+'項差異':'全部相符'}`);
+  save();checkInputs={};document.getElementById('check-note').value='';
+  renderCheckSheet();renderCheckHistory();renderInventory();updateAlertBadge();
+  toast(hasDiff?'盤點完成，差異已更新庫存':'盤點完成，全部相符！');
+}
+
+function renderCheckHistory(){
+  const whId=parseInt(document.getElementById('history-wh').value);
+  const tb=document.getElementById('check-history-table');
+  const records=D.stockChecks.filter(r=>r.whId===whId);
+  if(!records.length){tb.innerHTML='<tr><td colspan="6" class="empty">尚無盤點記錄</td></tr>';return}
+  tb.innerHTML=records.slice(0,30).map(r=>{
+    const diffItems=r.items.filter(i=>i.diff!==0);
+    const diffText=diffItems.length?diffItems.map(i=>`${i.productName}(${i.diff>0?'+':''}${i.diff})`).join('、'):'—';
+    return `<tr><td>${r.date}</td><td>${r.whName}</td><td>${r.operator}</td><td style="white-space:normal;line-height:1.5;color:${r.hasDiff?'var(--red)':'var(--text-secondary)'}">${diffText}</td><td>${r.hasDiff?'<span class="badge b-warn">有差異</span>':'<span class="badge b-ok">相符</span>'}</td><td>${r.note||'—'}</td></tr>`;
+  }).join('');
+}
+
+function renderAlerts(){
+  const low=getLow();
+  const el=document.getElementById('alerts-content');
+  el.innerHTML=low.length?`<div style="background:var(--red-light);border-radius:var(--radius);padding:12px 16px">${low.map(p=>{
+    const dist=D.warehouses.map(w=>`<span class="badge b-err" style="margin-right:4px">${w.name}:${getWhStock(w.id,p.id)}</span>`).join('');
+    return `<div class="alert-row" style="margin-bottom:8px;flex-wrap:wrap;gap:6px"><div style="flex:1"><strong>${p.name}</strong>（${p.code||''}）— 總量 <strong>${totalStock(p.id)}</strong>，下限 ${p.min}，還差 <strong style="color:var(--red)">${p.min-totalStock(p.id)}</strong> ${p.unit}</div><div>${dist}</div></div>`;
+  }).join('')}</div>`:'<div style="padding:16px;text-align:center;color:var(--green);font-size:13px">✓ 目前所有商品庫存充足</div>';
+  const tb=document.getElementById('alerts-table');
+  tb.innerHTML=D.products.map(p=>{
+    const total=totalStock(p.id),isLow=p.min>0&&total<p.min;
+    const dist=D.warehouses.map(w=>{const q=getWhStock(w.id,p.id);return`<span class="badge ${isLow?'b-err':'b-gray'}" style="margin-right:3px">${w.name}:${q}</span>`}).join('');
+    return `<tr style="${isLow?'background:var(--red-light)':''}"><td>${p.name}</td><td>${p.min||'—'}</td><td style="white-space:normal;line-height:1.8">${dist}</td><td style="font-weight:700;color:${isLow?'var(--red)':''}">${total}</td><td>${total===0?'<span class="badge b-err">無庫存</span>':isLow?'<span class="badge b-warn">低於下限</span>':'<span class="badge b-ok">正常</span>'}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">尚無商品</td></tr>';
+}
+
+function addWarehouse(){
+  const name=document.getElementById('wh-name').value.trim();if(!name){toast('請填倉庫名稱',false);return}
+  D.warehouses.push({id:Date.now(),name,addr:document.getElementById('wh-addr').value.trim(),type:document.getElementById('wh-type').value});
+  addLog('新增倉庫',name);save();toggleForm('wh-form');
+  ['wh-name','wh-addr'].forEach(i=>document.getElementById(i).value='');
+  renderWarehouseGrid();populateForms();toast('倉庫已新增');
+}
+
+function renderWarehouseGrid(){
+  const el=document.getElementById('wh-grid');
+  if(!D.warehouses.length){el.innerHTML='<div class="empty">尚無倉庫，點擊上方新增</div>';updateAlertBadge();return}
+  el.innerHTML=D.warehouses.map(wh=>{
+    const total=D.products.reduce((a,p)=>a+getWhStock(wh.id,p.id),0);
+    const hasLow=D.products.some(p=>p.min>0&&getWhStock(wh.id,p.id)<p.min);
+    const typeLabel=wh.type==='main'?'公司倉庫':'外部倉庫';
+    return `<div class="wh-card${wh.type==='main'?' main-wh':''}${selectedWh===wh.id?' selected':''}" onclick="selectWarehouse(${wh.id})">
+      <div style="font-size:13px;font-weight:600">${wh.name} ${hasLow?'<span class="badge b-err" style="font-size:9px">低庫存</span>':''}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:3px"><span class="badge ${wh.type==='main'?'b-info':'b-gray'}">${typeLabel}</span>${wh.addr?' · '+wh.addr:''}</div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px;color:var(--blue)">${total} <span style="font-size:11px;color:var(--text-secondary);font-weight:400">件</span></div>
+    </div>`;
+  }).join('');updateAlertBadge();
+}
+
+function selectWarehouse(id){
+  selectedWh=id;renderWarehouseGrid();
+  const wh=D.warehouses.find(w=>w.id===id);
+  document.getElementById('wh-detail-title').textContent=wh.name+' 庫存明細';
+  document.getElementById('wh-detail').style.display='block';renderWhDetail();
+  document.getElementById('ws-product').innerHTML=D.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')||'<option>尚無商品</option>';
+}
+
+function renderWhDetail(){
+  const tb=document.getElementById('wh-detail-table');
+  if(!D.products.length){tb.innerHTML='<tr><td colspan="7" class="empty">尚無商品</td></tr>';return}
+  tb.innerHTML=D.products.map(p=>{
+    const s=D.warehouseStock.find(s=>s.whId===selectedWh&&s.productId===p.id);
+    const qty=s?s.qty:0,isLow=p.min>0&&qty<p.min;
+    return `<tr style="${isLow?'background:var(--amber-light)':''}"><td>${p.name}</td><td style="font-weight:700;color:${qty===0?'var(--red)':''}">${qty}</td><td>${p.unit}</td><td>${p.min||'—'}</td><td>${qty===0?'<span class="badge b-err">無庫存</span>':isLow?'<span class="badge b-warn">低庫存</span>':'<span class="badge b-ok">正常</span>'}</td><td>${s?fmtShort(s.updatedAt):'—'}</td><td>${s?s.updatedBy||'—':'—'}</td></tr>`;
+  }).join('');
+}
+
+function addWarehouseStock(){
+  if(!selectedWh){toast('請先選擇倉庫',false);return}
+  const pId=parseInt(document.getElementById('ws-product').value);
+  const qty=parseInt(document.getElementById('ws-qty').value);
+  const optype=document.getElementById('ws-optype').value;
+  if(isNaN(qty)||qty<0){toast('請輸入有效數量',false);return}
+  const p=D.products.find(pr=>pr.id===pId),wh=D.warehouses.find(w=>w.id===selectedWh);
+  setWhStock(selectedWh,pId,qty,optype==='adjust');
+  addLog(optype==='in'?'入庫':'盤點調整',`[${wh?.name}] ${p?.name} ${optype==='in'?'+':'設為'}${qty}`);
+  save();toggleForm('wh-stock-form');document.getElementById('ws-qty').value='';
+  renderWhDetail();renderInventory();updateAlertBadge();toast(optype==='in'?'入庫成功':'盤點已更新');
+}
+
+function addProduct(){
+  const name=document.getElementById('p-name').value.trim(),code=document.getElementById('p-code').value.trim();
+  if(!name||!code){toast('請填名稱與編號',false);return}
+  D.products.push({id:Date.now(),name,code,unit:document.getElementById('p-unit').value,cat:document.getElementById('p-cat').value,min:parseInt(document.getElementById('p-min').value)||0});
+  addLog('新增商品',code+' '+name);save();toggleForm('inv-form');
+  ['p-name','p-code','p-min'].forEach(i=>document.getElementById(i).value='');
+  renderInventory();updateAlertBadge();toast('商品已新增');
+}
+
+function renderInventory(){
+  const tb=document.getElementById('inv-table');
+  if(!D.products.length){tb.innerHTML='<tr><td colspan="7" class="empty">尚無商品，點擊「新增商品」開始</td></tr>';return}
+  tb.innerHTML=D.products.map(p=>{
+    const total=totalStock(p.id),isLow=p.min>0&&total<p.min;
+    const dist=D.warehouses.map(w=>{const q=getWhStock(w.id,p.id);return q>0?`<span class="badge b-gray" style="margin-right:3px">${w.name}:${q}</span>`:''}).filter(Boolean).join('')||'<span style="color:var(--text-tertiary);font-size:11px">各倉庫均無庫存</span>';
+    return `<tr style="${isLow?'background:var(--amber-light)':''}"><td>${p.code}</td><td>${p.name}</td><td><span class="badge b-gray">${p.cat}</span></td><td>${p.min||'—'}</td><td style="font-weight:700;color:${isLow?'var(--red)':''}">${total}</td><td style="white-space:normal;line-height:2">${dist}</td><td>${total===0?'<span class="badge b-err">無庫存</span>':isLow?'<span class="badge b-warn">低庫存</span>':'<span class="badge b-ok">正常</span>'}</td></tr>`;
+  }).join('');
+}
+
+function populateForms(){
+  const pO=D.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')||'<option>尚無商品</option>';
+  const wO=D.warehouses.map(w=>`<option value="${w.id}">${w.name}</option>`).join('')||'<option>尚無倉庫</option>';
+  const cO=D.channels.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')||'<option>尚無通路</option>';
+  ['tf-product','ship-product','ci-product'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=pO});
+  ['tf-from','tf-to','ship-warehouse','ci-warehouse'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=wO});
+  const ordCh=document.getElementById('ord-ch');if(ordCh)ordCh.innerHTML=cO;
+  const po=D.orders.filter(o=>o.remaining>0).map(o=>`<option value="${o.id}">[${o.channel}] 未收 $${o.remaining.toLocaleString()}</option>`).join('');
+  const ro=document.getElementById('rcpt-ord');if(ro)ro.innerHTML=po||'<option>目前無待收訂單</option>';
+}
+
+function addTransfer(){
+  const pId=parseInt(document.getElementById('tf-product').value);
+  const fId=parseInt(document.getElementById('tf-from').value);
+  const tId=parseInt(document.getElementById('tf-to').value);
+  const qty=parseInt(document.getElementById('tf-qty').value);
+  if(!qty||qty<=0){toast('請輸入有效數量',false);return}
+  if(fId===tId){toast('來源與目標倉庫不能相同',false);return}
+  const fromStock=getWhStock(fId,pId);
+  if(fromStock<qty){toast(`來源倉庫庫存不足（現有 ${fromStock}）`,false);return}
+  const p=D.products.find(pr=>pr.id===pId),fw=D.warehouses.find(w=>w.id===fId),tw=D.warehouses.find(w=>w.id===tId);
+  setWhStock(fId,pId,-qty);setWhStock(tId,pId,qty);
+  D.transfers.push({id:Date.now(),productId:pId,fromId:fId,toId:tId,qty,note:document.getElementById('tf-note').value.trim(),operator:op(),createdAt:new Date().toISOString()});
+  addLog('倉庫調貨',`${p?.name}×${qty} ${fw?.name}→${tw?.name}`);
+  save();['tf-qty','tf-note'].forEach(i=>document.getElementById(i).value='');
+  renderTransferTable();renderInventory();updateAlertBadge();toast('調貨完成');
+}
+
+function renderTransferTable(){
+  const tb=document.getElementById('tf-table');
+  if(!D.transfers.length){tb.innerHTML='<tr><td colspan="7" class="empty">尚無調貨記錄</td></tr>';return}
+  tb.innerHTML=D.transfers.slice().reverse().map(t=>{
+    const p=D.products.find(pr=>pr.id===t.productId);
+    const fw=D.warehouses.find(w=>w.id===t.fromId),tw=D.warehouses.find(w=>w.id===t.toId);
+    return `<tr><td>${p?.name||'—'}</td><td>${fw?.name||'—'}</td><td>${tw?.name||'—'}</td><td>${t.qty}</td><td>${t.note||'—'}</td><td>${t.operator}</td><td>${fmtShort(t.createdAt)}</td></tr>`;
+  }).join('');
+}
+
+function addChannel(){
+  const name=document.getElementById('ch-name').value.trim();if(!name){toast('請填通路名稱',false);return}
+  D.channels.push({id:Date.now(),name,contact:document.getElementById('ch-contact').value.trim(),deduct:document.getElementById('ch-deduct').value});
+  addLog('新增通路商',name);save();toggleForm('ch-form');
+  ['ch-name','ch-contact'].forEach(i=>document.getElementById(i).value='');
+  renderChannels();toast('通路商已新增');
+}
+
+function renderChannels(){
+  const el=document.getElementById('ch-grid');
+  if(!D.channels.length){el.innerHTML='<div class="empty">尚無通路商</div>';return}
+  const dLabel={ship:'出貨即扣',report:'回報後扣'};
+  el.innerHTML=D.channels.map(ch=>{
+    const shipped=D.shipments.filter(s=>s.channelId===ch.id).reduce((a,s)=>a+s.qty,0);
+    return `<div class="ch-card${selectedCh===ch.id?' selected':''}" onclick="selectChannel(${ch.id})">
+      <div style="font-size:13px;font-weight:600">${ch.name}</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:3px">${ch.contact||'—'} · <span class="badge b-info" style="font-size:10px">${dLabel[ch.deduct]}</span></div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px;color:var(--blue)">${shipped} <span style="font-size:11px;color:var(--text-secondary);font-weight:400">已出貨</span></div>
+    </div>`;
+  }).join('');
+}
+
+function selectChannel(id){
+  selectedCh=id;renderChannels();
+  const ch=D.channels.find(c=>c.id===id);
+  document.getElementById('ch-detail-title').textContent=ch.name+' 出貨明細';
+  document.getElementById('ch-detail').style.display='block';renderChDetail();
+  document.getElementById('ship-product').innerHTML=D.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')||'<option>尚無商品</option>';
+  document.getElementById('ship-warehouse').innerHTML=D.warehouses.map(w=>`<option value="${w.id}">${w.name}</option>`).join('')||'<option>尚無倉庫</option>';
+}
+
+function renderChDetail(){
+  const tb=document.getElementById('ch-inv-table');
+  const ships=D.shipments.filter(s=>s.channelId===selectedCh);
+  if(!ships.length){tb.innerHTML='<tr><td colspan="8" class="empty">尚無出貨記錄</td></tr>';return}
+  tb.innerHTML=ships.slice().reverse().map(s=>{
+    const p=D.products.find(pr=>pr.id===s.productId),wh=D.warehouses.find(w=>w.id===s.warehouseId);
+    const remain=s.qty-(s.sold||0);
+    return `<tr><td>${p?.name||'—'}</td><td>${wh?.name||'—'}</td><td>${s.qty}</td><td>${s.sold||0} <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 6px" onclick="addSale(${s.id})">+銷售</button></td><td>${remain}</td><td><span class="badge b-gray">${s.mode==='once'?'整批':'分批'}</span></td><td style="white-space:normal;font-size:11px">${s.operator}<br><span style="color:var(--text-secondary)">${fmtShort(s.createdAt)}</span></td><td>${s.note||'—'}</td></tr>`;
+  }).join('');
+}
+
+function addShipment(){
+  if(!selectedCh){toast('請先選擇通路商',false);return}
+  const qty=parseInt(document.getElementById('ship-qty').value);if(!qty||qty<=0){toast('請輸入有效數量',false);return}
+  const pId=parseInt(document.getElementById('ship-product').value);
+  const wId=parseInt(document.getElementById('ship-warehouse').value);
+  const ch=D.channels.find(c=>c.id===selectedCh);
+  const whStock=getWhStock(wId,pId);
+  if(ch.deduct==='ship'&&whStock<qty){toast(`倉庫庫存不足（現有 ${whStock}）`,false);return}
+  if(ch.deduct==='ship')setWhStock(wId,pId,-qty);
+  const p=D.products.find(pr=>pr.id===pId),wh=D.warehouses.find(w=>w.id===wId);
+  D.shipments.push({id:Date.now(),channelId:selectedCh,productId:pId,warehouseId:wId,qty,sold:0,mode:document.getElementById('ship-mode').value,note:document.getElementById('ship-note').value.trim(),operator:op(),createdAt:new Date().toISOString()});
+  addLog('出貨登記',`${p?.name}×${qty} [${wh?.name}]→${ch.name}`);
+  save();toggleForm('ship-form');['ship-qty','ship-note'].forEach(i=>document.getElementById(i).value='');
+  renderChDetail();renderInventory();updateAlertBadge();toast('出貨已登記');
+}
+
+function addSale(shipId){
+  const qty=parseInt(prompt('請輸入回報銷售數量：'));if(!qty||qty<=0)return;
+  const s=D.shipments.find(s=>s.id===shipId);if(!s)return;
+  s.sold=Math.min((s.sold||0)+qty,s.qty);
+  const p=D.products.find(pr=>pr.id===s.productId),ch=D.channels.find(c=>c.id===s.channelId);
+  if(ch?.deduct==='report'){
+    setWhStock(s.warehouseId,s.productId,-qty);
+    addLog('庫存扣除（回報後扣）',`[${D.warehouses.find(w=>w.id===s.warehouseId)?.name}] ${p?.name}-${qty}`);
+  }else addLog('銷售回報',`${p?.name}×${qty} [${ch?.name}]`);
+  save();renderChDetail();renderInventory();updateAlertBadge();toast('銷售已更新');
+}
+
+function addOrder(){
+  const chId=parseInt(document.getElementById('ord-ch').value);
+  const ch=D.channels.find(c=>c.id===chId);if(!ch){toast('請選通路商',false);return}
+  const amt=parseInt(document.getElementById('ord-amt').value);if(!amt||amt<=0){toast('請輸入金額',false);return}
+  D.orders.push({id:Date.now(),channelId:chId,channel:ch.name,amount:amt,received:0,remaining:amt,paytype:document.getElementById('ord-type').value,note:document.getElementById('ord-note').value.trim(),operator:op(),createdAt:new Date().toISOString()});
+  addLog('建立訂單',`${ch.name} $${amt.toLocaleString()}`);
+  save();['ord-amt','ord-note'].forEach(i=>document.getElementById(i).value='');
+  renderOrders();populateForms();toast('訂單已建立');
+}
+
+function renderOrders(){
+  const tb=document.getElementById('ord-table');
+  if(!D.orders.length){tb.innerHTML='<tr><td colspan="8" class="empty">尚無訂單</td></tr>';return}
+  const tl={full:'一次付清',split:'分期',defer:'先貨後款'};
+  tb.innerHTML=D.orders.map(o=>{
+    const pct=o.amount>0?Math.round(o.received/o.amount*100):0;
+    const st=o.remaining===0?'<span class="badge b-ok">已收清</span>':pct>0?`<span class="badge b-warn">${pct}%</span>`:'<span class="badge b-err">未收</span>';
+    return `<tr><td>${o.channel}</td><td>$${o.amount.toLocaleString()}</td><td>$${o.received.toLocaleString()}</td><td style="color:${o.remaining>0?'var(--red)':''};font-weight:${o.remaining>0?'700':'400'}">$${o.remaining.toLocaleString()}</td><td><span class="badge b-gray">${tl[o.paytype]||o.paytype}</span></td><td>${st}</td><td style="font-size:11px;white-space:normal">${o.operator}<br><span style="color:var(--text-secondary)">${fmtShort(o.createdAt)}</span></td><td><button class="btn btn-sm btn-outline" onclick="switchPayTab('receipts');setTimeout(populateForms,50)">收款</button></td></tr>`;
+  }).join('');
+}
+
+function handleUpload(e){
+  Array.from(e.target.files).forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      uploadedFiles.push({name:f.name,data:ev.target.result});
+      document.getElementById('rcpt-preview').innerHTML=uploadedFiles.map(f=>`<div style="background:var(--bg-secondary);padding:4px 8px;border-radius:4px;font-size:11px;border:1px solid var(--border-light)">${f.name}</div>`).join('');
+    };r.readAsDataURL(f);
+  });
+}
+
+function addReceipt(){
+  const ordId=parseInt(document.getElementById('rcpt-ord').value);
+  const ord=D.orders.find(o=>o.id===ordId);if(!ord){toast('請選訂單',false);return}
+  const amt=parseInt(document.getElementById('rcpt-amt').value);if(!amt||amt<=0){toast('請輸入金額',false);return}
+  const paid=Math.min(amt,ord.remaining);
+  ord.received+=paid;ord.remaining-=paid;
+  D.receipts.push({id:Date.now(),orderId:ordId,channel:ord.channel,amount:paid,note:document.getElementById('rcpt-note').value.trim(),files:uploadedFiles.map(f=>f.name),operator:op(),createdAt:new Date().toISOString()});
+  addLog('登記收款',`${ord.channel} $${paid.toLocaleString()} 收據${uploadedFiles.length}張`);
+  uploadedFiles=[];document.getElementById('rcpt-preview').innerHTML='';document.getElementById('rcpt-file').value='';
+  ['rcpt-amt','rcpt-note'].forEach(i=>document.getElementById(i).value='');
+  save();renderOrders();renderReceipts();populateForms();toast('收款已登記');
+}
+
+function renderReceipts(){
+  const tb=document.getElementById('rcpt-table');
+  if(!D.receipts.length){tb.innerHTML='<tr><td colspan="5" class="empty">尚無收款記錄</td></tr>';return}
+  tb.innerHTML=D.receipts.map(r=>`<tr><td>${r.channel}</td><td>$${r.amount.toLocaleString()}</td><td>${r.note||'—'}</td><td>${r.files?.length?`<span class="badge b-ok">${r.files.length}張</span>`:'<span class="badge b-err">無</span>'}</td><td style="font-size:11px;white-space:normal">${r.operator}<br><span style="color:var(--text-secondary)">${fmtShort(r.createdAt)}</span></td></tr>`).join('');
+}
+
+function switchPayTab(tab,btn){
+  document.getElementById('pay-orders').style.display=tab==='orders'?'block':'none';
+  document.getElementById('pay-receipts').style.display=tab==='receipts'?'block':'none';
+  document.querySelectorAll('#panel-payment .tab').forEach((b,i)=>b.classList.toggle('active',(i===0&&tab==='orders')||(i===1&&tab==='receipts')));
+  if(tab==='receipts'){populateForms();renderReceipts()}else renderOrders();
+}
+
+function addCharityCase(){
+  const org=document.getElementById('ci-org').value.trim();if(!org){toast('請填公益團體名稱',false);return}
+  const pId=parseInt(document.getElementById('ci-product').value);
+  const wId=parseInt(document.getElementById('ci-warehouse').value);
+  const p=D.products.find(pr=>pr.id===pId),wh=D.warehouses.find(w=>w.id===wId);
+  const type=document.getElementById('ci-type').value;
+  const steps=type==='donation'?[
+    {key:'s1',label:'公益團體提供收據',done:false,who:'',ts:''},
+    {key:'s2',label:'捐款人捐款至同濟會（老闆為會長）',done:false,who:'',ts:''},
+    {key:'s3',label:'同濟會入帳確認',done:false,who:'',ts:''},
+    {key:'s4',label:'同濟會回捐至公益團體，取得收據',done:false,who:'',ts:''},
+    {key:'s5',label:'出貨＋提供產品給公益團體',done:false,who:'',ts:''}
+  ]:[
+    {key:'s1',label:'公益團體提供收據',done:false,who:'',ts:''},
+    {key:'s2',label:`安排出貨（${{once:'整批給慢慢扣',batch:'分批寄送'}[document.getElementById('ci-ship').value]}）`,done:false,who:'',ts:''},
+    {key:'s3',label:'出貨完成，雙方確認收據',done:false,who:'',ts:''}
+  ];
+  D.charityCases.push({id:Date.now(),org,type,productId:pId,productName:p?.name||'—',warehouseId:wId,warehouseName:wh?.name||'—',qty:parseInt(document.getElementById('ci-qty').value)||0,shipMode:document.getElementById('ci-ship').value,note:document.getElementById('ci-note').value.trim(),steps,operator:op(),createdAt:new Date().toISOString()});
+  addLog('建立公益案件',`${org}・${type==='donation'?'捐款流程':'收據出貨'}・${wh?.name}`);
+  save();toggleForm('ci-form');['ci-org','ci-qty','ci-note'].forEach(i=>document.getElementById(i).value='');
+  renderCharity();toast('公益案件已建立');
+}
+
+function toggleStep(caseId,stepKey){
+  const c=D.charityCases.find(c=>c.id===caseId);if(!c)return;
+  const s=c.steps.find(s=>s.key===stepKey);if(!s)return;
+  s.done=!s.done;s.who=s.done?op():'';s.ts=s.done?new Date().toISOString():'';
+  addLog(s.done?'完成步驟':'取消步驟',`[${c.org}] ${s.label}`);save();renderCharity();
+}
+
+function renderCharity(){
+  const el=document.getElementById('ci-list');
+  if(!D.charityCases.length){el.innerHTML='<div class="empty">尚無公益合作案件，點擊新增案件開始</div>';return}
+  const tl={receipt:'收據出貨',donation:'捐款流程（同濟會）'};
+  const sl={once:'整批慢扣',batch:'分批'};
+  el.innerHTML=D.charityCases.map(c=>{
+    const done=c.steps.filter(s=>s.done).length,total=c.steps.length,pct=Math.round(done/total*100);
+    const stepsHtml=c.steps.map(s=>`<div class="step-row"><div class="step-check${s.done?' done':''}" onclick="toggleStep(${c.id},'${s.key}')">${s.done?'<svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,5.5 4,7.5 8,3" stroke="var(--green)" stroke-width="2" fill="none"/></svg>':''}</div><div class="step-label${s.done?' done':''}">${s.label}</div>${s.done&&s.who?`<div class="step-who">${s.who} · ${fmtShort(s.ts)}</div>`:''}</div>`).join('');
+    return `<div style="border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div><div style="font-size:14px;font-weight:700">${c.org}</div><div style="font-size:11px;color:var(--text-secondary);margin-top:3px"><span class="badge b-purple">${tl[c.type]}</span> ${c.productName}×${c.qty} · <span class="badge b-teal">${sl[c.shipMode]}</span> · <span class="badge b-info">出貨：${c.warehouseName}</span></div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--text-secondary)">進度</div><div style="font-size:18px;font-weight:700;color:${pct===100?'var(--green)':'var(--text-primary)'}">${pct}%</div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      ${stepsHtml}
+      <div style="font-size:11px;color:var(--text-secondary);margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)">建立：${c.operator} · ${fmtShort(c.createdAt)}${c.note?' · '+c.note:''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDashboard(){
+  const low=getLow();updateAlertBadge();
+  const pendAmt=D.orders.reduce((a,o)=>a+o.remaining,0);
+  const todayShip=D.shipments.filter(s=>new Date(s.createdAt).toDateString()===new Date().toDateString()).length;
+  const todayChecked=D.stockChecks.filter(r=>r.date===today()).length;
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">商品種類</div><div class="stat-value sv-blue">${D.products.length}</div></div>
+    <div class="stat-card"><div class="stat-label">倉庫數量</div><div class="stat-value">${D.warehouses.length}</div></div>
+    <div class="stat-card"><div class="stat-label">庫存警示</div><div class="stat-value sv-red" style="cursor:pointer" onclick="showPanel('alerts')">${low.length}</div></div>
+    <div class="stat-card"><div class="stat-label">今日盤點</div><div class="stat-value sv-green">${todayChecked}/${D.warehouses.length}</div></div>
+    ${currentRole!=='staff'?`<div class="stat-card" style="grid-column:span 2"><div class="stat-label">總待收款</div><div class="stat-value sv-amber">$${pendAmt.toLocaleString()}</div></div><div class="stat-card" style="grid-column:span 2"><div class="stat-label">今日出貨筆數</div><div class="stat-value">${todayShip}</div></div>`:''}`;
+  document.getElementById('dash-wh-list').innerHTML=D.warehouses.length?D.warehouses.map(wh=>{
+    const items=D.products.filter(p=>getWhStock(wh.id,p.id)>0);
+    const hasChecked=D.stockChecks.some(r=>r.whId===wh.id&&r.date===today());
+    const topItems=items.slice(0,4).map(p=>`<span class="badge b-gray" style="margin-right:3px">${p.name}:${getWhStock(wh.id,p.id)}</span>`).join('');
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border-light)"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;font-weight:600">${wh.name} ${hasChecked?'<span class="badge b-ok" style="font-size:10px">已盤點</span>':'<span class="badge b-warn" style="font-size:10px">待盤點</span>'}</div><div style="font-size:15px;font-weight:700;color:var(--blue)">${items.reduce((a,p)=>a+getWhStock(wh.id,p.id),0)}</div></div><div style="margin-top:5px">${topItems||'<span style="font-size:11px;color:var(--text-tertiary)">無庫存</span>'}</div></div>`;
+  }).join(''):'<div class="empty">尚無倉庫</div>';
+  document.getElementById('dash-log').innerHTML=D.logs.slice(0,8).length?D.logs.slice(0,8).map(l=>`<div class="log-item"><div class="log-dot"></div><div style="font-size:12px;flex:1;line-height:1.5">${l.action}：${l.detail}</div><div style="font-size:10px;color:var(--text-tertiary);white-space:nowrap;text-align:right">${l.operator}<br>${fmtShort(l.ts)}</div></div>`).join(''):'<div class="empty">尚無操作記錄</div>';
+  const arCard=document.getElementById('dash-ar-card');
+  arCard.style.display=currentRole==='staff'?'none':'block';
+  if(currentRole!=='staff'){
+    const byChannel={};D.orders.forEach(o=>{if(!byChannel[o.channel])byChannel[o.channel]={total:0,received:0,remaining:0};byChannel[o.channel].total+=o.amount;byChannel[o.channel].received+=o.received;byChannel[o.channel].remaining+=o.remaining});
+    document.getElementById('dash-ar').innerHTML=Object.entries(byChannel).map(([ch,v])=>`<tr><td>${ch}</td><td>$${v.total.toLocaleString()}</td><td>$${v.received.toLocaleString()}</td><td style="color:${v.remaining>0?'var(--red)':''};font-weight:${v.remaining>0?'700':'400'}">$${v.remaining.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">尚無財務資料</td></tr>';
+  }
+}
+
+function renderLog(){
+  const q=(document.getElementById('log-search')?.value||'').toLowerCase();
+  const logs=D.logs.filter(l=>!q||l.operator.toLowerCase().includes(q)||l.action.includes(q)||l.detail.includes(q));
+  document.getElementById('log-table').innerHTML=logs.length?logs.map(l=>`<tr><td>${fmtDate(l.ts)}</td><td>${l.operator}</td><td><span class="badge b-gray">${l.role}</span></td><td>${l.action}</td><td style="white-space:normal;line-height:1.5">${l.detail}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">尚無記錄</td></tr>';
+}
+
+function exportLog(){
+  const rows=[['時間','操作人','角色','動作','詳情']].concat(D.logs.map(l=>[fmtDate(l.ts),l.operator,l.role,l.action,l.detail]));
+  downloadCSV(rows,'操作日誌.csv');toast('日誌已匯出');
+}
+
+function downloadCSV(rows,filename){
+  const csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=filename;a.click();
+}
+
+function exportAllData(){
+  const json=JSON.stringify(D,null,2);
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(json);
+  a.download='wms_backup_'+today().replace(/\//g,'-')+'.json';
+  a.click();toast('資料已備份');
+}
+
+// Init with sample data
+load();
+if(!D.warehouses.length){
+  D.warehouses=[{id:1,name:'公司主倉庫',addr:'台中市西屯區',type:'main'},{id:2,name:'外部倉庫 A',addr:'台中市北屯區',type:'other'},{id:3,name:'外部倉庫 B',addr:'台中市南屯區',type:'other'}];
+  D.products=[{id:1,name:'禮品組 A',code:'G-001',unit:'個',cat:'禮品',min:50},{id:2,name:'健康包',code:'H-002',unit:'包',cat:'公益商品',min:30},{id:3,name:'包裝盒',code:'B-003',unit:'箱',cat:'包材',min:20}];
+  D.warehouseStock=[{whId:1,productId:1,qty:320,updatedAt:new Date().toISOString(),updatedBy:'王小明'},{whId:1,productId:2,qty:18,updatedAt:new Date().toISOString(),updatedBy:'王小明'},{whId:2,productId:1,qty:150,updatedAt:new Date().toISOString(),updatedBy:'李阿花'},{whId:2,productId:3,qty:80,updatedAt:new Date().toISOString(),updatedBy:'李阿花'},{whId:3,productId:2,qty:10,updatedAt:new Date().toISOString(),updatedBy:'張主任'}];
+  D.channels=[{id:1,name:'全聯',contact:'王經理',deduct:'ship'},{id:2,name:'家樂福',contact:'李主任',deduct:'report'}];
+  D.orders=[{id:1,channelId:1,channel:'全聯',amount:50000,received:20000,remaining:30000,paytype:'split',note:'',operator:'王小明',createdAt:new Date().toISOString()}];
+  D.logs=[{id:1,ts:new Date().toISOString(),operator:'系統',role:'老闆',action:'系統初始化',detail:'歡迎使用供應商倉儲管理系統'}];
+  save();
+}
+document.getElementById('nav-log').style.display='flex';
+updateAlertBadge();renderDashboard();
+</script>
+</body>
+</html>
